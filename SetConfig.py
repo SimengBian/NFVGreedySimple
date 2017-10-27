@@ -19,17 +19,22 @@ lengthOfSC = 3
 
 #  Here the service chains are generated randomly
 serviceChains = {c: [] for c in range(numOfSC)}
-for c in range(numOfSC):
-        NFs = list(range(numOfNF))  # the networks function {0,1,2,...,F-1}
-        random.shuffle(NFs)
-        chain = NFs[0:lengthOfSC]  # the chosen service chain
-        if chain not in serviceChains.values():  # if it is new
-            serviceChains[c] = chain  # added it to the dictionary
-            break
+c = 0
+while True:
+    if c >= numOfSC:
+        break
+
+    NFs = list(range(numOfNF))  # the networks function {0,1,2,...,F-1}
+    random.shuffle(NFs)
+    chain = NFs[0:lengthOfSC]  # the chosen service chain
+    if chain not in serviceChains.values():  # if it is new
+        serviceChains[c] = chain  # added it to the dictionary
+        c += 1
+
 #  serviceChainsNew[c][i] is the i-th NF of SC type c
-serviceChainsNew = (-1) * np.ones((numOfSC, numOfNF), dtype=int)
+serviceChainsNew = (-1) * np.ones((numOfSC, lengthOfSC), dtype=int)
 for c in range(numOfSC):
-    for i in range(len(serviceChains[c])):
+    for i in range(lengthOfSC):
         serviceChainsNew[c][i] = serviceChains[c][i]
 
 #  Here each service chain may have different arrival rates
