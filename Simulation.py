@@ -34,7 +34,7 @@ maxEnergies = snInformation['maxEnergies']  # maxEnergies[s]
 queueBacklogs = {V: np.zeros((numOfServer, numOfNF, numOfSC), dtype=int) for V in Vs}
 
 # VMStates[V][s, f] maintains the on-off states of the VM f on server s. "True" means "on" and "False" means "off".
-VMStates = {V: np.zeros((numOfServer, numOfNF), dtype=bool) for V in Vs}
+# VMStates = {V: np.zeros((numOfServer, numOfNF), dtype=bool) for V in Vs}
 
 # resourceAllocations[V][s, f, c] denotes how many resources is allocated to type c on VM f, on server s.
 resourceAllocations = {V: np.zeros((numOfServer, numOfNF, numOfSC), dtype=int) for V in Vs}
@@ -43,9 +43,12 @@ actualServices = {V: np.zeros((numOfServer, numOfNF, numOfSC), dtype=int) for V 
 # placements[V][(c, f)] = s means the NF f of service chain c is placed on server s
 placements = {V: {} for V in Vs}
 
+avgQueueBacklogs = {V: np.zeros(maxTime) for V in Vs}
+avgEnergyCosts = {V: np.zeros(maxTime) for V in Vs}
+
 
 def VNFPlacement(V, queues):
-    print("VNFPlacement")
+    # print("VNFPlacement")
     placement = {}
     #  For each service chain type c, and one of its function f, we need to decide on which server to place it
     for c in range(numOfSC):
@@ -60,22 +63,23 @@ def VNFPlacement(V, queues):
 
 
 def ResourceAllocation(V, queues):
-    print("ResourceAllocation")
+    # print("ResourceAllocation")
     allocation = np.zeros((numOfServer, numOfNF, numOfSC))
     for s in range(numOfServer):
-        term1 = V * (maxEnergies[s] - idleEnergies[s]) / serverCapacities[s]
+        term1 = V * (maxEnergies[s] - idleEnergies[s]) / float(serverCapacities[s])
         weights = term1 * np.ones((numOfNF, numOfSC))
         for f in range(numOfNF):
             for c in range(numOfSC):
-                weights[f, c] -= queues[s, f, c] / processingCost[f]
+                weights[f, c] -= queues[s, f, c] / float(processingCost[f])
         (chosenVM, chosenType) = np.unravel_index(weights.argmin(), weights.shape)
-        allocation[s, chosenVM, chosenType] = serverCapacities[s]
+        if weights[chosenVM, chosenType] < 0:
+            allocation[s, chosenVM, chosenType] = serverCapacities[s]
 
     return allocation
 
 
 def QueueUpdate(V, queues, services, placement):
-    print("QueueUpdate")
+    # print("QueueUpdate")
     for s in range(numOfServer):
         for f in range(numOfNF):
             for c in range(numOfSC):
@@ -93,7 +97,7 @@ def QueueUpdate(V, queues, services, placement):
 
 
 def ServiceUpdate(V, queues, allocation):
-    print("ServiceUpdate")
+    # print("ServiceUpdate")
     services = np.zeros((numOfServer, numOfNF, numOfSC))
     for s in range(numOfServer):
         for f in range(numOfNF):
@@ -121,13 +125,43 @@ def VNFGreedy(t, V):
     actualServices[V] = ServiceUpdate(V, queueBacklogs[V], resourceAllocations[V])
 
 
+def calculateAvgQueueBacklog(V):
+    queues = queueBacklogs[V]
+    total = 0
+    for s in range(numOfServer):
+        for f in range(numOfNF):
+            for c in range(numOfSC):
+                total += queues[s, f, c]
+
+    # return total/float(numOfServer * numOfNF * numOfSC)
+    return total
+
+
+def calculateAvgEnergyCost(V):
+    services = actualServices[V]
+    total = 0
+    for s in range(numOfServer):
+        for f in range(numOfNF):
+            for c in range(numOfSC):
+                total += services[s, f, c] * processingCost[f]
+
+    # return total/float(numOfServer * numOfNF * numOfSC)
+    return total
+
 if __name__ == "__main__":
     for V in Vs:
         for t in range(maxTime):
+            print("Now V is", V, " and time slot is", t)
             VNFGreedy(t, V)
+            avgQueueBacklogs[V][t] = calculateAvgQueueBacklog(V)
+            avgEnergyCosts[V][t] = calculateAvgEnergyCost(V)
 
-    # for V in Vs:
-    #     print("***************")
-    #     print(V)
-    #     print np.sum(queueBacklogs[V])
+    avgQueueBacklogsNew = np.zeros((lenOfVs, maxTime))
+    avgEnergyCostsNew = np.zeros((lenOfVs, maxTime))
+    for i in range(lenOfVs):
+        avgQueueBacklogsNew[i, :] = np.array(avgQueueBacklogs[Vs[i]])
+        avgEnergyCostsNew[i, :] = np.array(avgEnergyCosts[Vs[i]])
+
+    np.savez("results/avgQueueBacklogs.npz", avgQueueBacklogs=avgQueueBacklogsNew)
+    np.savez("results/avgEnergyCosts.npz", avgEnergyCosts=avgEnergyCostsNew)
     print("main")
