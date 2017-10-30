@@ -4,32 +4,33 @@ import numpy as np
 '''
 Network Function (NF)
 '''
-numOfNF = 4  # number of NF types
+numOfNF = 3  # number of NF types
 
-# processingCost = [0 for f in range(numOfNF)]
-processingCost = np.zeros(numOfNF)
-for f in range(numOfNF):
-    processingCost[f] = 1
+processingCost = [1, 2, 5]
+# processingCost = np.zeros(numOfNF)
+# for f in range(numOfNF):
+#     processingCost[f] = 1
 
 '''
 Service Chain (SC)
 '''
-numOfSC = 3  # number of Service Chain types
+numOfSC = 2  # number of Service Chain types
 lengthOfSC = 3
 
 #  Here the service chains are generated randomly
-serviceChains = {c: [] for c in range(numOfSC)}
-c = 0
-while True:
-    if c >= numOfSC:
-        break
-
-    NFs = list(range(numOfNF))  # the networks function {0,1,2,...,F-1}
-    random.shuffle(NFs)
-    chain = NFs[0:lengthOfSC]  # the chosen service chain
-    if chain not in serviceChains.values():  # if it is new
-        serviceChains[c] = chain  # added it to the dictionary
-        c += 1
+serviceChains = {0: [2, 0, 1], 1: [0, 1, 2]}
+# serviceChains = {c: [] for c in range(numOfSC)}
+# c = 0
+# while True:
+#     if c >= numOfSC:
+#         break
+#
+#     NFs = list(range(numOfNF))  # the networks function {0,1,2,...,F-1}
+#     random.shuffle(NFs)
+#     chain = NFs[0:lengthOfSC]  # the chosen service chain
+#     if chain not in serviceChains.values():  # if it is new
+#         serviceChains[c] = chain  # added it to the dictionary
+#         c += 1
 
 #  serviceChainsNew[c][i] is the i-th NF of SC type c
 serviceChainsNew = (-1) * np.ones((numOfSC, lengthOfSC), dtype=int)
@@ -38,34 +39,34 @@ for c in range(numOfSC):
         serviceChainsNew[c][i] = serviceChains[c][i]
 
 #  Here each service chain may have different arrival rates
-# arrivalRates = [0 for c in range(numOfSC)]
-arrivalRates = np.zeros(numOfSC)
-for c in range(numOfSC):
-    arrivalRates[c] = 2
+arrivalRates = [2, 3]
+# arrivalRates = np.zeros(numOfSC)
+# for c in range(numOfSC):
+#     arrivalRates[c] = 2
 
 
 '''
 Substrate Network (SN)
 '''
-numOfServer = 5  # number of servers
+numOfServer = 2  # number of servers
 
 serverCapacities = np.zeros(numOfServer)
 for c in range(numOfServer):
-    serverCapacities[c] = 2
+    serverCapacities[c] = 20
 
 idleEnergies = np.zeros(numOfServer)
 for c in range(numOfServer):
-    idleEnergies[c] = 0
+    idleEnergies[c] = 10
 
 maxEnergies = np.zeros(numOfServer)
 for c in range(numOfServer):
-    maxEnergies[c] = 10
+    maxEnergies[c] = 50
 
 '''
 System Information
 '''
-maxTime = 5
-Vs = [1, 2]
+maxTime = 500
+Vs = [i for i in range(101)]
 
 #  arrivals[c, t] is the number of arrival requests of SC type c at time-slot t
 arrivals = np.zeros((numOfSC, maxTime))
@@ -101,10 +102,14 @@ def generate(maxTime, arrRate, arrProc):
     return totalArrivals
 
 
+# arrivals[0, :] = np.array([0, 1, 1, 0, 0])
+# arrivals[1, :] = np.array([5, 7, 3, 9, 4])
 for c in range(numOfSC):
         arrivals[c, :] = generate(maxTime, arrivalRates[c], procs['exp'])
 
-# print(np.sum(arrivals))
+
+# print(serviceChains)
+# print(arrivals)
 np.savez("config/NF Information.npz", numOfNF=numOfNF, processingCost=processingCost)
 np.savez("config/SC Information.npz", numOfSC=numOfSC, lengthOfSC=lengthOfSC, serviceChains=serviceChainsNew, arrivalRates=arrivalRates)
 np.savez("config/SN Information.npz", numOfServer=numOfServer, serverCapacities=serverCapacities, idleEnergies=idleEnergies, maxEnergies=maxEnergies)
